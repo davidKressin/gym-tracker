@@ -430,10 +430,84 @@ input:focus {
     margin-bottom: 20px;
 }
 
+.header-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 10px;
+}
+
 .btn-text {
     background: none;
     border: none;
     color: var(--primary-color);
-    margin-left: auto;
     cursor: pointer;
+}
+
+/* AUTH / LOGIN VIEW */
+.login-container {
+    max-width: 400px;
+    margin: 80px auto;
+    padding: 40px 30px;
+    background: var(--card-bg);
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.login-header ion-icon {
+    font-size: 3rem;
+    color: var(--primary-color);
+    margin-bottom: 15px;
+}
+
+.login-header h1 {
+    font-size: 2rem;
+    margin-bottom: 5px;
+}
+
+.login-header p {
+    color: var(--text-secondary);
+    margin-bottom: 30px;
+}
+
+.auth-tabs {
+    display: flex;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 5px;
+    margin-bottom: 30px;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.tab-btn.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+.error-message {
+    color: #ff4d4d;
+    font-size: 0.9rem;
+    margin-top: 15px;
+    min-height: 1.2rem;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.logout-btn {
+    color: #ff4d4d !important;
 }

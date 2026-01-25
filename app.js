@@ -6,6 +6,8 @@
 const app = {
     // STATE
     state: {
+        user: null,
+        authMode: 'login', // 'login' or 'register'
         routines: [],
         history: [],
         activeWorkout: null, // { routineId, currentExerciseIndex, currentSet, logs: [] }
@@ -15,16 +17,99 @@ const app = {
 
     // INIT
     init: function () {
-        this.loadData();
-        this.renderRoutines();
-        this.renderHistory();
+        // Check for file:// protocol
+        if (window.location.protocol === 'file:') {
+            console.warn("Firebase Auth works best with http/https. Persistence might not work on file://");
+        }
+
+        // Wait for Firebase to be ready (Race condition fix)
+        if (!window.firebaseAuth) {
+            console.log("Waiting for Firebase initialization...");
+            setTimeout(() => this.init(), 100);
+            return;
+        }
+
+        // Listen for Auth State
+        const { onAuthStateChanged, auth } = window.firebaseAuth;
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                this.state.user = user;
+                document.getElementById('login-view').classList.add('hidden');
+                document.getElementById('main-app-content').classList.remove('hidden');
+                document.getElementById('user-display-name').innerText = user.email.split('@')[0];
+
+                await this.loadData();
+                this.renderRoutines();
+                this.renderHistory();
+                this.navigate('home-view');
+            } else {
+                this.state.user = null;
+                document.getElementById('login-view').classList.remove('hidden');
+                document.getElementById('main-app-content').classList.add('hidden');
+            }
+        });
 
         // Prevent accidental back navigation on mobile
         window.history.pushState(null, null, window.location.href);
         window.onpopstate = function () {
             window.history.pushState(null, null, window.location.href);
-            // Handle logical back if needed, e.g. from editor to home
         };
+    },
+
+    // AUTH LOGIC
+    switchAuthTab: function (mode) {
+        this.state.authMode = mode;
+        document.getElementById('tab-login').classList.toggle('active', mode === 'login');
+        document.getElementById('tab-register').classList.toggle('active', mode === 'register');
+        document.getElementById('auth-submit-btn').innerText = mode === 'login' ? 'Ingresar' : 'Registrarse';
+        document.getElementById('auth-error').innerText = '';
+    },
+
+    handleAuth: async function (e) {
+        e.preventDefault();
+        const email = document.getElementById('auth-email').value;
+        const password = document.getElementById('auth-password').value;
+        const errorEl = document.getElementById('auth-error');
+        errorEl.innerText = '';
+
+        const { auth, signInWithEmailAndPassword, createUserWithEmailAndPassword } = window.firebaseAuth;
+
+        try {
+            if (this.state.authMode === 'login') {
+                await signInWithEmailAndPassword(auth, email, password);
+            } else {
+                await createUserWithEmailAndPassword(auth, email, password);
+            }
+        } catch (error) {
+            console.error("Full Auth Error:", error);
+            errorEl.innerText = this.getAuthErrorMessage(error.code);
+        }
+    },
+
+    logout: async function () {
+        const { auth, signOut } = window.firebaseAuth;
+        try {
+            await signOut(auth);
+        } catch (error) {
+            console.error("Logout Error:", error);
+        }
+    },
+
+    getAuthErrorMessage: function (code) {
+        console.log("Error Code:", code);
+        switch (code) {
+            case 'auth/invalid-email': return 'Email inválido.';
+            case 'auth/user-disabled': return 'Usuario deshabilitado.';
+            case 'auth/user-not-found': return 'Usuario no encontrado.';
+            case 'auth/wrong-password': return 'Contraseña incorrecta.';
+            case 'auth/invalid-credential': return 'Credenciales inválidas (email o contraseña incorrectos).';
+            case 'auth/email-already-in-use': return 'El email ya está en uso.';
+            case 'auth/weak-password': return 'La contraseña debe tener al menos 6 caracteres.';
+            case 'auth/operation-not-allowed': return 'El inicio de sesión con email/contraseña no está habilitado en Firebase.';
+            case 'auth/network-request-failed': return 'Error de red. Revisa tu conexión.';
+            case 'auth/too-many-requests': return 'Demasiados intentos. Intenta más tarde.';
+            default: return `Error (${code}): Intenta de nuevo.`;
+        }
     },
 
     // NAVIGATION
@@ -44,17 +129,56 @@ const app = {
     },
 
     // DATA MANAGEMENT
-    loadData: function () {
-        const storedRoutines = localStorage.getItem('gym_routines');
-        const storedHistory = localStorage.getItem('gym_history');
-        if (storedRoutines) this.state.routines = JSON.parse(storedRoutines);
-        if (storedHistory) this.state.history = JSON.parse(storedHistory);
+    loadData: async function () {
+        const { db, doc, getDoc } = window.firebaseAuth;
+        const userId = this.state.user.uid;
+
+        try {
+            const docRef = doc(db, "users", userId);
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                this.state.routines = data.routines || [];
+                this.state.history = data.history || [];
+                console.log("Data loaded from Firestore");
+            } else {
+                // Check for migration from localStorage
+                const storedRoutines = localStorage.getItem('gym_routines');
+                const storedHistory = localStorage.getItem('gym_history');
+
+                if (storedRoutines || storedHistory) {
+                    console.log("Migrating data from localStorage to Firestore...");
+                    if (storedRoutines) this.state.routines = JSON.parse(storedRoutines);
+                    if (storedHistory) this.state.history = JSON.parse(storedHistory);
+
+                    await this.saveData(); // Save to Firestore
+
+                    // Optional: Clear localStorage after migration
+                    // localStorage.removeItem('gym_routines');
+                    // localStorage.removeItem('gym_history');
+                }
+            }
+        } catch (error) {
+            console.error("Error loading data from Firestore:", error);
+        }
     },
 
-    saveData: function () {
-        localStorage.setItem('gym_routines', JSON.stringify(this.state.routines));
-        localStorage.setItem('gym_history', JSON.stringify(this.state.history));
-        this.renderRoutines(); // Refresh UI
+    saveData: async function () {
+        const { db, doc, setDoc } = window.firebaseAuth;
+        const userId = this.state.user.uid;
+
+        try {
+            const docRef = doc(db, "users", userId);
+            await setDoc(docRef, {
+                routines: this.state.routines,
+                history: this.state.history
+            });
+            console.log("Data saved to Firestore");
+            this.renderRoutines(); // Refresh UI
+        } catch (error) {
+            console.error("Error saving data to Firestore:", error);
+        }
     },
 
     // ROUTINE MANAGEMENT
@@ -121,7 +245,7 @@ const app = {
         container.appendChild(div);
     },
 
-    saveRoutine: function () {
+    saveRoutine: async function () {
         const name = document.getElementById('routine-name-input').value;
         if (!name) return alert('Ponle un nombre a la rutina!');
 
@@ -143,14 +267,14 @@ const app = {
         };
 
         this.state.routines.push(newRoutine);
-        this.saveData();
+        await this.saveData();
         this.navigate('home-view');
     },
 
-    deleteRoutine: function (id) {
+    deleteRoutine: async function (id) {
         if (confirm('¿Borrar esta rutina?')) {
             this.state.routines = this.state.routines.filter(r => r.id !== id);
-            this.saveData();
+            await this.saveData();
         }
     },
 
@@ -234,10 +358,10 @@ const app = {
         }
     },
 
-    finishWorkout: function () {
+    finishWorkout: async function () {
         this.state.activeWorkout.endTime = new Date().toISOString();
         this.state.history.unshift(this.state.activeWorkout);
-        this.saveData(); // Save history
+        await this.saveData(); // Save history
         this.state.activeWorkout = null;
         alert('Entrenamiento Terminado! 💪');
         this.renderHistory();
@@ -337,6 +461,55 @@ const app = {
         document.body.appendChild(downloadAnchorNode);
         downloadAnchorNode.click();
         downloadAnchorNode.remove();
+    },
+
+    triggerImport: function () {
+        document.getElementById('import-json-input').click();
+    },
+
+    importData: function (event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const importedHistory = JSON.parse(e.target.result);
+
+                if (!Array.isArray(importedHistory)) {
+                    throw new Error("El formato del JSON no es válido (debe ser un array).");
+                }
+
+                // Simple validation: check if first item has expected keys
+                if (importedHistory.length > 0) {
+                    const first = importedHistory[0];
+                    if (!first.routineName || !first.logs) {
+                        throw new Error("El formato del JSON no coincide con el historial de GymTracker.");
+                    }
+                }
+
+                // Merge history (avoiding exact duplicates based on startTime)
+                const existingStartTimes = new Set(this.state.history.map(h => h.startTime));
+                const newLogs = importedHistory.filter(h => !existingStartTimes.has(h.startTime));
+
+                if (newLogs.length === 0) {
+                    alert("No se encontraron nuevos entrenamientos para importar.");
+                    return;
+                }
+
+                this.state.history = [...newLogs, ...this.state.history];
+                await this.saveData();
+                this.renderHistory();
+                alert(`¡Éxito! Se importaron ${newLogs.length} entrenamientos.`);
+
+                // Reset input
+                event.target.value = '';
+            } catch (error) {
+                console.error("Import Error:", error);
+                alert("Error al importar el archivo: " + error.message);
+            }
+        };
+        reader.readAsText(file);
     }
 };
 

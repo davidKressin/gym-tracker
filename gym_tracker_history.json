@@ -1,0 +1,354 @@
+[
+    {
+        "routineId": "1768948994987",
+        "routineName": "Torso B hipertrofia",
+        "currentExerciseIndex": 4,
+        "currentSet": 3,
+        "startTime": "2026-01-24T01:47:29.644Z",
+        "logs": [
+            {
+                "exercise": "Press inclinado",
+                "set": 1,
+                "weight": "40",
+                "reps": "8",
+                "timestamp": "2026-01-24T01:57:59.433Z"
+            },
+            {
+                "exercise": "Press inclinado",
+                "set": 2,
+                "weight": "40",
+                "reps": "7",
+                "timestamp": "2026-01-24T02:00:24.221Z"
+            },
+            {
+                "exercise": "Press inclinado",
+                "set": 3,
+                "weight": "40",
+                "reps": "5",
+                "timestamp": "2026-01-24T02:02:55.534Z"
+            },
+            {
+                "exercise": "Remo polea baja",
+                "set": 1,
+                "weight": "30",
+                "reps": "13",
+                "timestamp": "2026-01-24T02:09:58.813Z"
+            },
+            {
+                "exercise": "Remo polea baja",
+                "set": 2,
+                "weight": "35",
+                "reps": "14",
+                "timestamp": "2026-01-24T02:12:28.843Z"
+            },
+            {
+                "exercise": "Remo polea baja",
+                "set": 3,
+                "weight": "40",
+                "reps": "10",
+                "timestamp": "2026-01-24T02:15:01.256Z"
+            },
+            {
+                "exercise": "Press banca barra",
+                "set": 1,
+                "weight": "40",
+                "reps": "3",
+                "timestamp": "2026-01-24T02:24:40.863Z"
+            },
+            {
+                "exercise": "Press banca barra",
+                "set": 2,
+                "weight": "",
+                "reps": "0",
+                "timestamp": "2026-01-24T02:24:48.030Z"
+            },
+            {
+                "exercise": "Press banca barra",
+                "set": 3,
+                "weight": "",
+                "reps": "0",
+                "timestamp": "2026-01-24T02:24:53.123Z"
+            },
+            {
+                "exercise": "Elevaciones laterales",
+                "set": 1,
+                "weight": "20",
+                "reps": "10",
+                "timestamp": "2026-01-24T02:36:57.409Z"
+            },
+            {
+                "exercise": "Elevaciones laterales",
+                "set": 2,
+                "weight": "20",
+                "reps": "10",
+                "timestamp": "2026-01-24T02:38:38.926Z"
+            },
+            {
+                "exercise": "Elevaciones laterales",
+                "set": 3,
+                "weight": "12",
+                "reps": "10",
+                "timestamp": "2026-01-24T02:40:24.162Z"
+            },
+            {
+                "exercise": "Elevaciones laterales",
+                "set": 4,
+                "weight": "20",
+                "reps": "13",
+                "timestamp": "2026-01-24T02:42:19.575Z"
+            },
+            {
+                "exercise": "Curl biceps barra",
+                "set": 1,
+                "weight": "27",
+                "reps": "10",
+                "timestamp": "2026-01-24T02:50:48.065Z"
+            },
+            {
+                "exercise": "Curl biceps barra",
+                "set": 2,
+                "weight": "24",
+                "reps": "9",
+                "timestamp": "2026-01-24T02:54:51.161Z"
+            },
+            {
+                "exercise": "Curl biceps barra",
+                "set": 3,
+                "weight": "24",
+                "reps": "9",
+                "timestamp": "2026-01-24T02:59:22.995Z"
+            }
+        ],
+        "endTime": "2026-01-24T02:59:23.990Z"
+    },
+    {
+        "routineId": "1768343224873",
+        "routineName": "Piernas A fuerza",
+        "currentExerciseIndex": 3,
+        "currentSet": 3,
+        "startTime": "2026-01-17T17:42:23.390Z",
+        "logs": [
+            {
+                "exercise": "Sentadilla",
+                "set": 1,
+                "weight": "70",
+                "reps": "6",
+                "timestamp": "2026-01-17T17:48:04.199Z"
+            },
+            {
+                "exercise": "Sentadilla",
+                "set": 2,
+                "weight": "70",
+                "reps": "7",
+                "timestamp": "2026-01-17T17:51:12.626Z"
+            },
+            {
+                "exercise": "Sentadilla",
+                "set": 3,
+                "weight": "70",
+                "reps": "6",
+                "timestamp": "2026-01-17T17:54:26.032Z"
+            },
+            {
+                "exercise": "Sentadilla",
+                "set": 4,
+                "weight": "70",
+                "reps": "5",
+                "timestamp": "2026-01-17T17:57:51.434Z"
+            },
+            {
+                "exercise": "Peso muerto rumano",
+                "set": 1,
+                "weight": "70",
+                "reps": "6",
+                "timestamp": "2026-01-17T18:06:08.230Z"
+            },
+            {
+                "exercise": "Peso muerto rumano",
+                "set": 2,
+                "weight": "80",
+                "reps": "1",
+                "timestamp": "2026-01-17T18:10:25.118Z"
+            },
+            {
+                "exercise": "Peso muerto rumano",
+                "set": 3,
+                "weight": "70",
+                "reps": "3",
+                "timestamp": "2026-01-17T18:15:19.058Z"
+            },
+            {
+                "exercise": "Bulgaro",
+                "set": 1,
+                "weight": "",
+                "reps": "20",
+                "timestamp": "2026-01-17T18:24:37.024Z"
+            },
+            {
+                "exercise": "Bulgaro",
+                "set": 2,
+                "weight": "20",
+                "reps": "20",
+                "timestamp": "2026-01-17T18:27:42.838Z"
+            },
+            {
+                "exercise": "Bulgaro",
+                "set": 3,
+                "weight": "20",
+                "reps": "18",
+                "timestamp": "2026-01-17T18:30:05.174Z"
+            },
+            {
+                "exercise": "Crunch polea",
+                "set": 1,
+                "weight": "25",
+                "reps": "15",
+                "timestamp": "2026-01-17T18:34:02.146Z"
+            },
+            {
+                "exercise": "Crunch polea",
+                "set": 2,
+                "weight": "25",
+                "reps": "15",
+                "timestamp": "2026-01-17T18:36:24.125Z"
+            },
+            {
+                "exercise": "Crunch polea",
+                "set": 3,
+                "weight": "25",
+                "reps": "12",
+                "timestamp": "2026-01-17T18:38:50.775Z"
+            }
+        ],
+        "endTime": "2026-01-17T18:39:00.319Z"
+    },
+    {
+        "routineId": "1768277545188",
+        "routineName": "Torso A fuerza",
+        "currentExerciseIndex": 4,
+        "currentSet": 3,
+        "startTime": "2026-01-13T04:12:32.607Z",
+        "logs": [
+            {
+                "exercise": "Press banca barra",
+                "set": 1,
+                "weight": "50",
+                "reps": "6",
+                "timestamp": "2026-01-13T04:21:56.156Z"
+            },
+            {
+                "exercise": "Press banca barra",
+                "set": 2,
+                "weight": "50",
+                "reps": "5",
+                "timestamp": "2026-01-13T04:24:51.075Z"
+            },
+            {
+                "exercise": "Press banca barra",
+                "set": 3,
+                "weight": "50",
+                "reps": "3",
+                "timestamp": "2026-01-13T04:28:06.346Z"
+            },
+            {
+                "exercise": "Press banca barra",
+                "set": 4,
+                "weight": "40",
+                "reps": "5",
+                "timestamp": "2026-01-13T04:30:56.019Z"
+            },
+            {
+                "exercise": "Dominadas pronas",
+                "set": 1,
+                "weight": "30",
+                "reps": "16",
+                "timestamp": "2026-01-13T04:34:38.601Z"
+            },
+            {
+                "exercise": "Dominadas pronas",
+                "set": 2,
+                "weight": "40",
+                "reps": "11",
+                "timestamp": "2026-01-13T04:37:52.830Z"
+            },
+            {
+                "exercise": "Dominadas pronas",
+                "set": 3,
+                "weight": "45",
+                "reps": "8",
+                "timestamp": "2026-01-13T04:40:41.057Z"
+            },
+            {
+                "exercise": "Dominadas pronas",
+                "set": 4,
+                "weight": "45",
+                "reps": "8",
+                "timestamp": "2026-01-13T04:43:44.491Z"
+            },
+            {
+                "exercise": "Press militar barra",
+                "set": 1,
+                "weight": "20",
+                "reps": "15",
+                "timestamp": "2026-01-13T04:46:57.023Z"
+            },
+            {
+                "exercise": "Press militar barra",
+                "set": 2,
+                "weight": "30",
+                "reps": "6",
+                "timestamp": "2026-01-13T04:49:37.349Z"
+            },
+            {
+                "exercise": "Press militar barra",
+                "set": 3,
+                "weight": "30",
+                "reps": "5",
+                "timestamp": "2026-01-13T04:52:48.958Z"
+            },
+            {
+                "exercise": "Remo barra",
+                "set": 1,
+                "weight": "40",
+                "reps": "20",
+                "timestamp": "2026-01-13T04:56:22.249Z"
+            },
+            {
+                "exercise": "Remo barra",
+                "set": 2,
+                "weight": "40",
+                "reps": "15",
+                "timestamp": "2026-01-13T04:58:55.197Z"
+            },
+            {
+                "exercise": "Remo barra",
+                "set": 3,
+                "weight": "40",
+                "reps": "13",
+                "timestamp": "2026-01-13T05:01:15.882Z"
+            },
+            {
+                "exercise": "Triceps polea",
+                "set": 1,
+                "weight": "15",
+                "reps": "14",
+                "timestamp": "2026-01-13T05:04:19.357Z"
+            },
+            {
+                "exercise": "Triceps polea",
+                "set": 2,
+                "weight": "15",
+                "reps": "11",
+                "timestamp": "2026-01-13T05:06:25.867Z"
+            },
+            {
+                "exercise": "Triceps polea",
+                "set": 3,
+                "weight": "15",
+                "reps": "6",
+                "timestamp": "2026-01-13T05:08:48.756Z"
+            }
+        ],
+        "endTime": "2026-01-13T05:09:48.784Z"
+    }
+]

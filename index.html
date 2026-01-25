@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,136 +8,210 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-analytics.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCToFotQ0Vj31MjUEMfcvjt9OAEWyXmDhQ",
+            authDomain: "gym-tracker-7ebcf.firebaseapp.com",
+            projectId: "gym-tracker-7ebcf",
+            storageBucket: "gym-tracker-7ebcf.firebasestorage.app",
+            messagingSenderId: "535346668158",
+            appId: "1:535346668158:web:c5f11b95b68b9cc6aa6e2f",
+            measurementId: "G-RTT8DJX9WY"
+        };
+
+        // Initialize Firebase
+        const appFirebase = initializeApp(firebaseConfig);
+        const auth = getAuth(appFirebase);
+        const db = getFirestore(appFirebase);
+        const analytics = getAnalytics(appFirebase);
+
+        // Expose to window for app.js
+        window.firebaseAuth = { auth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, db, doc, getDoc, setDoc };
+    </script>
     <link rel="stylesheet" href="style.css">
     <!-- Ionicons for icons -->
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
 </head>
+
 <body>
 
-    <div class="app-container">
-        
-        <!-- HEADER -->
-        <header class="main-header">
-            <div class="logo">
+    <!-- LOGIN VIEW -->
+    <section id="login-view" class="view active-view">
+        <div class="login-container">
+            <div class="login-header">
                 <ion-icon name="barbell-outline"></ion-icon>
                 <h1>GymTracker</h1>
-            </div>
-            <nav>
-                <button class="nav-btn active" onclick="app.navigate('home-view')"><ion-icon name="home-outline"></ion-icon></button>
-                <button class="nav-btn" onclick="app.navigate('history-view')"><ion-icon name="time-outline"></ion-icon></button>
-            </nav>
-        </header>
-
-        <!-- VIEW: HOME (Dashboard) -->
-        <section id="home-view" class="view active-view">
-            <div class="welcome-banner">
-                <h2>Hola, <span>Atleta</span></h2>
-                <p>Listo para entrenar hoy?</p>
+                <p>Tu progreso empieza aquí</p>
             </div>
 
-            <div class="section-title">
-                <h3>Mis Rutinas</h3>
-                <button class="btn-icon" onclick="app.navigate('routine-editor-view')"><ion-icon name="add-outline"></ion-icon></button>
+            <div class="auth-tabs">
+                <button id="tab-login" class="tab-btn active" onclick="app.switchAuthTab('login')">Ingresar</button>
+                <button id="tab-register" class="tab-btn" onclick="app.switchAuthTab('register')">Registrarse</button>
             </div>
 
-            <div id="routines-list" class="routines-grid">
-                <!-- Routine Cards will be injected here -->
-                <div class="empty-state">
-                    <p>No tienes rutinas. Crea una nueva!</p>
+            <form id="auth-form" onsubmit="app.handleAuth(event)">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="auth-email" placeholder="tu@email.com" required>
                 </div>
-            </div>
-        </section>
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <input type="password" id="auth-password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" id="auth-submit-btn" class="btn-primary w-100">Ingresar</button>
+            </form>
+            <p id="auth-error" class="error-message"></p>
+        </div>
+    </section>
 
-        <!-- VIEW: EDITOR (Create/Edit Routine) -->
-        <section id="routine-editor-view" class="view">
-            <header class="view-header">
-                <button class="btn-back" onclick="app.navigate('home-view')"><ion-icon name="arrow-back-outline"></ion-icon></button>
-                <h3>Editar Rutina</h3>
-            </header>
-            
-            <div class="form-group">
-                <label>Nombre de la Rutina</label>
-                <input type="text" id="routine-name-input" placeholder="Ej. Día de Pecho">
-            </div>
+    <div id="main-app-content" class="hidden">
+        <div class="app-container">
 
-            <div class="exercises-list-editor" id="exercises-list-editor">
-                <!-- Exercise inputs will be added here -->
-            </div>
-
-            <button class="btn-secondary w-100" onclick="app.addExerciseInput()">
-                <ion-icon name="add-circle-outline"></ion-icon> Agregar Ejercicio
-            </button>
-
-            <div class="spacer"></div>
-            
-            <button class="btn-primary w-100" onclick="app.saveRoutine()">Guardar Rutina</button>
-        </section>
-
-        <!-- VIEW: WORKOUT (Active Session) -->
-        <section id="workout-view" class="view">
-            <header class="view-header">
-                <button class="btn-back" onclick="app.confirmExitWorkout()"><ion-icon name="close-outline"></ion-icon></button>
-                <h3 id="active-routine-name">Entrenando...</h3>
+            <!-- HEADER -->
+            <header class="main-header">
+                <div class="logo">
+                    <ion-icon name="barbell-outline"></ion-icon>
+                    <h1>GymTracker</h1>
+                </div>
+                <nav>
+                    <button class="nav-btn active" onclick="app.navigate('home-view')"><ion-icon
+                            name="home-outline"></ion-icon></button>
+                    <button class="nav-btn" onclick="app.navigate('history-view')"><ion-icon
+                            name="time-outline"></ion-icon></button>
+                    <button class="nav-btn logout-btn" onclick="app.logout()"><ion-icon
+                            name="log-out-outline"></ion-icon></button>
+                </nav>
             </header>
 
-            <div class="workout-progress">
-                <span id="current-exercise-index">1/5</span>
-                <div class="progress-bar"><div class="fill" id="workout-progress-fill" style="width: 20%"></div></div>
-            </div>
-
-            <div class="active-exercise-card">
-                <h2 id="active-exercise-name">Bench Press</h2>
-                <div class="set-info">
-                    <span class="badge">Serie <span id="current-set-num">1</span>/<span id="total-sets-num">4</span></span>
-                    <span class="badge secondary">Descanso <span id="target-rest-time">90</span>s</span>
+            <!-- VIEW: HOME (Dashboard) -->
+            <section id="home-view" class="view">
+                <div class="welcome-banner">
+                    <h2>Hola, <span id="user-display-name">Atleta</span></h2>
+                    <p>Listo para entrenar hoy?</p>
                 </div>
 
-                <div class="input-big-wrapper">
-                    <label>Peso (kg/lbs)</label>
-                    <input type="number" id="weight-input" placeholder="0" inputmode="decimal">
+                <div class="section-title">
+                    <h3>Mis Rutinas</h3>
+                    <button class="btn-icon" onclick="app.navigate('routine-editor-view')"><ion-icon
+                            name="add-outline"></ion-icon></button>
                 </div>
 
-                <div class="input-big-wrapper">
-                    <label>Reps Realizadas</label>
-                    <input type="number" id="reps-input" placeholder="0" inputmode="numeric">
-                </div>
-
-                <button class="btn-primary w-100 btn-large" onclick="app.finishSet()">
-                    TERMINAR SERIE
-                </button>
-            </div>
-            
-            <!-- REST OVERLAY (Modal) -->
-            <div id="rest-overlay" class="rest-overlay hidden">
-                <div class="timer-container">
-                    <h3>Descanso</h3>
-                    <div class="timer-display" id="timer-display">01:30</div>
-                    
-                    <div class="timer-controls">
-                        <button class="btn-chk" onclick="app.adjustTimer(-10)">-10s</button>
-                        <button class="btn-chk" onclick="app.skipRest()">Saltar</button>
-                        <button class="btn-chk" onclick="app.adjustTimer(+10)">+10s</button>
+                <div id="routines-list" class="routines-grid">
+                    <!-- Routine Cards will be injected here -->
+                    <div class="empty-state">
+                        <p>No tienes rutinas. Crea una nueva!</p>
                     </div>
                 </div>
-            </div>
+            </section>
 
-        </section>
+            <!-- VIEW: EDITOR (Create/Edit Routine) -->
+            <section id="routine-editor-view" class="view">
+                <header class="view-header">
+                    <button class="btn-back" onclick="app.navigate('home-view')"><ion-icon
+                            name="arrow-back-outline"></ion-icon></button>
+                    <h3>Editar Rutina</h3>
+                </header>
 
-        <!-- VIEW: HISTORY -->
-        <section id="history-view" class="view">
-            <header class="view-header">
-                <h3>Historial</h3>
-                <button class="btn-text" onclick="app.exportData()">Exportar JSON</button>
-            </header>
-            
-            <div id="history-list" class="history-list">
-                <!-- Logs injected here -->
-            </div>
-        </section>
+                <div class="form-group">
+                    <label>Nombre de la Rutina</label>
+                    <input type="text" id="routine-name-input" placeholder="Ej. Día de Pecho">
+                </div>
 
+                <div class="exercises-list-editor" id="exercises-list-editor">
+                    <!-- Exercise inputs will be added here -->
+                </div>
+
+                <button class="btn-secondary w-100" onclick="app.addExerciseInput()">
+                    <ion-icon name="add-circle-outline"></ion-icon> Agregar Ejercicio
+                </button>
+
+                <div class="spacer"></div>
+
+                <button class="btn-primary w-100" onclick="app.saveRoutine()">Guardar Rutina</button>
+            </section>
+
+            <!-- VIEW: WORKOUT (Active Session) -->
+            <section id="workout-view" class="view">
+                <header class="view-header">
+                    <button class="btn-back" onclick="app.confirmExitWorkout()"><ion-icon
+                            name="close-outline"></ion-icon></button>
+                    <h3 id="active-routine-name">Entrenando...</h3>
+                </header>
+
+                <div class="workout-progress">
+                    <span id="current-exercise-index">1/5</span>
+                    <div class="progress-bar">
+                        <div class="fill" id="workout-progress-fill" style="width: 20%"></div>
+                    </div>
+                </div>
+
+                <div class="active-exercise-card">
+                    <h2 id="active-exercise-name">Bench Press</h2>
+                    <div class="set-info">
+                        <span class="badge">Serie <span id="current-set-num">1</span>/<span
+                                id="total-sets-num">4</span></span>
+                        <span class="badge secondary">Descanso <span id="target-rest-time">90</span>s</span>
+                    </div>
+
+                    <div class="input-big-wrapper">
+                        <label>Peso (kg/lbs)</label>
+                        <input type="number" id="weight-input" placeholder="0" inputmode="decimal">
+                    </div>
+
+                    <div class="input-big-wrapper">
+                        <label>Reps Realizadas</label>
+                        <input type="number" id="reps-input" placeholder="0" inputmode="numeric">
+                    </div>
+
+                    <button class="btn-primary w-100 btn-large" onclick="app.finishSet()">
+                        TERMINAR SERIE
+                    </button>
+                </div>
+
+                <!-- REST OVERLAY (Modal) -->
+                <div id="rest-overlay" class="rest-overlay hidden">
+                    <div class="timer-container">
+                        <h3>Descanso</h3>
+                        <div class="timer-display" id="timer-display">01:30</div>
+
+                        <div class="timer-controls">
+                            <button class="btn-chk" onclick="app.adjustTimer(-10)">-10s</button>
+                            <button class="btn-chk" onclick="app.skipRest()">Saltar</button>
+                            <button class="btn-chk" onclick="app.adjustTimer(+10)">+10s</button>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- VIEW: HISTORY -->
+            <section id="history-view" class="view">
+                <header class="view-header">
+                    <h3>Historial</h3>
+                    <div class="header-actions">
+                        <button class="btn-text" onclick="app.triggerImport()">Importar JSON</button>
+                        <button class="btn-text" onclick="app.exportData()">Exportar JSON</button>
+                    </div>
+                    <input type="file" id="import-json-input" accept=".json" style="display:none"
+                        onchange="app.importData(event)">
+                </header>
+
+                <div id="history-list" class="history-list">
+                    <!-- Logs injected here -->
+                </div>
+            </section>
+
+        </div>
     </div>
 
     <script src="app.js"></script>
 </body>
+
 </html>
