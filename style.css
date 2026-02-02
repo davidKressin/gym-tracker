@@ -310,7 +310,14 @@ input:focus {
 
 .active-exercise-card h2 {
     font-size: 2rem;
-    margin-bottom: 15px;
+    margin-bottom: 5px;
+}
+
+.prev-info {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    font-weight: 600;
 }
 
 .set-info {
@@ -421,6 +428,30 @@ input:focus {
 .history-date {
     font-size: 0.8rem;
     color: var(--text-secondary);
+}
+
+.history-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.delete-history-btn {
+    background: none;
+    border: none;
+    color: var(--danger-color);
+    cursor: pointer;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+.delete-history-btn:hover {
+    background: rgba(255, 71, 87, 0.1);
 }
 
 .view-header {

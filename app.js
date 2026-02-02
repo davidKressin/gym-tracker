@@ -154,9 +154,9 @@ const app = {
 
                     await this.saveData(); // Save to Firestore
 
-                    // Optional: Clear localStorage after migration
-                    // localStorage.removeItem('gym_routines');
-                    // localStorage.removeItem('gym_history');
+                    // Clear localStorage after migration
+                    localStorage.removeItem('gym_routines');
+                    localStorage.removeItem('gym_history');
                 }
             }
         } catch (error) {
@@ -178,6 +178,15 @@ const app = {
             this.renderRoutines(); // Refresh UI
         } catch (error) {
             console.error("Error saving data to Firestore:", error);
+        }
+    },
+
+    deleteHistoryItem: async function (startTime, event) {
+        if (event) event.stopPropagation();
+        if (confirm('¿Borrar esta entrada del historial?')) {
+            this.state.history = this.state.history.filter(h => h.startTime !== startTime);
+            await this.saveData();
+            this.renderHistory();
         }
     },
 
@@ -240,7 +249,9 @@ const app = {
                     <input type="number" class="ex-rest" value="60">
                 </div>
             </div>
-            ${count > 1 ? '<button class="btn-delete-ex" onclick="this.parentElement.remove()"><ion-icon name="trash-outline"></ion-icon></button>' : ''}
+            <button class="btn-delete-ex" onclick="this.parentElement.remove()">
+                <ion-icon name="trash-outline"></ion-icon>
+            </button>
         `;
         container.appendChild(div);
     },
@@ -311,10 +322,42 @@ const app = {
         document.getElementById('total-sets-num').innerText = exercise.sets;
         document.getElementById('target-rest-time').innerText = exercise.rest;
 
+        // Display Previous Max Weight & Reps
+        const prevBest = this.getPreviousBestSet(routine.id, exercise.name);
+        const infoEl = document.getElementById('prev-max-weight');
+        if (infoEl) {
+            infoEl.innerText = prevBest ? `Anterior Máx: ${prevBest.weight}kg x ${prevBest.reps} reps` : 'Sin registro previo';
+        }
+
         // Reset inputs for convenience or keep prev if helpful? Let's reset.
         // Or better: try to auto-fill with prev set if available
         document.getElementById('weight-input').value = '';
         // document.getElementById('reps-input').value = ''; // Let's leave reps empty or default to something? default 0
+    },
+
+    getPreviousBestSet: function (routineId, exerciseName) {
+        // Find the last session of the same routine
+        const lastSession = this.state.history.find(h => h.routineId === routineId);
+        if (!lastSession) return null;
+
+        // Extract logs for the specific exercise
+        const relevantLogs = lastSession.logs
+            .filter(log => log.exercise === exerciseName && log.weight && log.weight !== "");
+
+        if (relevantLogs.length === 0) return null;
+
+        // Sort to find the best set: Highest weight, then highest reps
+        relevantLogs.sort((a, b) => {
+            const wA = parseFloat(a.weight);
+            const wB = parseFloat(b.weight);
+            if (wA !== wB) return wB - wA;
+            return (parseInt(b.reps) || 0) - (parseInt(a.reps) || 0);
+        });
+
+        return {
+            weight: relevantLogs[0].weight,
+            reps: relevantLogs[0].reps
+        };
     },
 
     finishSet: function () {
@@ -445,7 +488,12 @@ const app = {
             div.innerHTML = `
                 <div class="history-item-header">
                     <strong>${log.routineName}</strong>
-                    <span class="history-date">${date}</span>
+                    <div class="history-actions">
+                        <span class="history-date">${date}</span>
+                        <button class="btn-icon delete-history-btn" onclick="app.deleteHistoryItem('${log.startTime}', event)">
+                            <ion-icon name="trash-outline"></ion-icon>
+                        </button>
+                    </div>
                 </div>
                 <p style="font-size:0.9rem; color:var(--text-secondary)">Sets completados: ${totalSets}</p>
             `;
