@@ -15,7 +15,9 @@ const app = {
         timerSeconds: 0,
         workoutInterval: null,
         workoutSeconds: 0,
-        editingRoutineId: null
+        editingRoutineId: null,
+        historyView: 'list', // 'list' or 'calendar'
+        calendarDate: new Date() // Current month being viewed
     },
 
     // INIT
@@ -613,6 +615,109 @@ const app = {
         }
 
         this.navigate('history-detail-view');
+    },
+
+    toggleHistoryView: function (view) {
+        this.state.historyView = view;
+        document.getElementById('history-list').classList.toggle('hidden', view !== 'list');
+        document.getElementById('history-calendar-view').classList.toggle('hidden', view !== 'calendar');
+
+        document.getElementById('btn-history-list').classList.toggle('active', view === 'list');
+        document.getElementById('btn-history-calendar').classList.toggle('active', view === 'calendar');
+
+        if (view === 'calendar') {
+            this.renderCalendar();
+        } else {
+            this.renderHistory();
+        }
+    },
+
+    changeCalendarMonth: function (delta) {
+        const date = new Date(this.state.calendarDate);
+        date.setMonth(date.getMonth() + delta);
+        this.state.calendarDate = date;
+        this.renderCalendar();
+    },
+
+    renderCalendar: function () {
+        const container = document.getElementById('calendar-days-grid');
+        const monthYearLabel = document.getElementById('calendar-month-year');
+        if (!container || !monthYearLabel) return;
+
+        container.innerHTML = '';
+
+        const date = this.state.calendarDate;
+        const year = date.getFullYear();
+        const month = date.getMonth();
+
+        const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+        ];
+        monthYearLabel.innerText = `${monthNames[month]} ${year}`;
+
+        // First day of the month
+        const firstDay = new Date(year, month, 1).getDay();
+        // Number of days in month
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        // Previous month padding
+        for (let i = 0; i < firstDay; i++) {
+            const div = document.createElement('div');
+            div.className = 'calendar-day empty';
+            container.appendChild(div);
+        }
+
+        // Days of the month
+        const today = new Date();
+        const trainingDays = new Set();
+        this.state.history.forEach(log => {
+            const logDate = new Date(log.startTime);
+            if (logDate.getFullYear() === year && logDate.getMonth() === month) {
+                trainingDays.add(logDate.getDate());
+            }
+        });
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const div = document.createElement('div');
+            div.className = 'calendar-day';
+            div.innerText = day;
+
+            if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+                div.classList.add('today');
+            }
+
+            if (trainingDays.has(day)) {
+                div.classList.add('has-workout');
+                div.onclick = () => {
+                    this.showHistoryForDay(year, month, day);
+                };
+            }
+
+            container.appendChild(div);
+        }
+    },
+
+    showHistoryForDay: function (year, month, day) {
+        // Find workouts on this specific day
+        const dayWorkouts = this.state.history.filter(log => {
+            const logDate = new Date(log.startTime);
+            return logDate.getFullYear() === year &&
+                logDate.getMonth() === month &&
+                logDate.getDate() === day;
+        });
+
+        if (dayWorkouts.length === 0) return;
+
+        if (dayWorkouts.length === 1) {
+            // Only one workout, show details immediately
+            this.renderHistoryDetail(dayWorkouts[0].startTime);
+        } else {
+            // Multiple workouts, switch to list view (future: could filter list view)
+            this.state.historyView = 'list';
+            this.toggleHistoryView('list');
+            // A simple alert for now to let user know they can see them in the list
+            alert(`Hubo ${dayWorkouts.length} entrenamientos este día. Míralos en la lista.`);
+        }
     },
 
     exportData: function () {

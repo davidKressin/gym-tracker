@@ -202,12 +202,35 @@
                         <button class="btn-text" onclick="app.triggerImport()">Importar JSON</button>
                         <button class="btn-text" onclick="app.exportData()">Exportar JSON</button>
                     </div>
-                    <input type="file" id="import-json-input" accept=".json" style="display:none"
-                        onchange="app.importData(event)">
                 </header>
+
+                <div class="view-switcher">
+                    <button id="btn-history-list" class="switcher-btn active" onclick="app.toggleHistoryView('list')">
+                        <ion-icon name="list-outline"></ion-icon> Lista
+                    </button>
+                    <button id="btn-history-calendar" class="switcher-btn" onclick="app.toggleHistoryView('calendar')">
+                        <ion-icon name="calendar-outline"></ion-icon> Calendario
+                    </button>
+                </div>
 
                 <div id="history-list" class="history-list">
                     <!-- Logs injected here -->
+                </div>
+
+                <div id="history-calendar-view" class="history-calendar-view hidden">
+                    <div class="calendar-header">
+                        <button class="btn-icon" onclick="app.changeCalendarMonth(-1)"><ion-icon
+                                name="chevron-back-outline"></ion-icon></button>
+                        <h4 id="calendar-month-year"></h4>
+                        <button class="btn-icon" onclick="app.changeCalendarMonth(1)"><ion-icon
+                                name="chevron-forward-outline"></ion-icon></button>
+                    </div>
+                    <div class="calendar-grid-header">
+                        <span>Dom</span><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span>
+                    </div>
+                    <div id="calendar-days-grid" class="calendar-days-grid">
+                        <!-- Days injected here -->
+                    </div>
                 </div>
             </section>
 
