@@ -12,7 +12,10 @@ const app = {
         history: [],
         activeWorkout: null, // { routineId, currentExerciseIndex, currentSet, logs: [] }
         timerInterval: null,
-        timerSeconds: 0
+        timerSeconds: 0,
+        workoutInterval: null,
+        workoutSeconds: 0,
+        editingRoutineId: null
     },
 
     // INIT
@@ -122,8 +125,8 @@ const app = {
         if (viewId === 'home-view') document.querySelector('.nav-btn[onclick*="home-view"]').classList.add('active');
         if (viewId === 'history-view') document.querySelector('.nav-btn[onclick*="history-view"]').classList.add('active');
 
-        // Clear editor if navigating there
-        if (viewId === 'routine-editor-view') {
+        // Clear editor if navigating there and not editing
+        if (viewId === 'routine-editor-view' && !this.state.editingRoutineId) {
             this.setupRoutineEditor();
         }
     },
@@ -214,6 +217,9 @@ const app = {
                 <h3>${routine.name}</h3>
                 <p>${exerciseCount} Ejercicios: ${exercisesSummary}</p>
                 <div class="card-actions">
+                   <button class="btn-icon" onclick="app.editRoutine('${routine.id}', event)">
+                        <ion-icon name="create-outline"></ion-icon>
+                   </button>
                    <button class="btn-icon" onclick="app.deleteRoutine('${routine.id}', event)">
                         <ion-icon name="trash-outline"></ion-icon>
                    </button>
@@ -229,7 +235,26 @@ const app = {
         this.addExerciseInput(); // Add one default
     },
 
-    addExerciseInput: function () {
+    editRoutine: function (id, event) {
+        if (event) event.stopPropagation();
+        const routine = this.state.routines.find(r => r.id === id);
+        if (!routine) return;
+
+        this.state.editingRoutineId = id;
+
+        // Populate inputs
+        document.getElementById('routine-name-input').value = routine.name;
+        const container = document.getElementById('exercises-list-editor');
+        container.innerHTML = '';
+
+        routine.exercises.forEach(ex => {
+            this.addExerciseInput(ex);
+        });
+
+        this.navigate('routine-editor-view');
+    },
+
+    addExerciseInput: function (data = null) {
         const container = document.getElementById('exercises-list-editor');
         const count = container.children.length + 1;
         const div = document.createElement('div');
@@ -237,16 +262,16 @@ const app = {
         div.innerHTML = `
             <div style="margin-bottom:10px;">
                 <label>Nombre Ejercicio</label>
-                <input type="text" class="ex-name" placeholder="Ej. Squat">
+                <input type="text" class="ex-name" placeholder="Ej. Squat" value="${data ? data.name : ''}">
             </div>
             <div style="display:flex; gap:10px;">
                 <div style="flex:1;">
                     <label>Series</label>
-                    <input type="number" class="ex-sets" value="3">
+                    <input type="number" class="ex-sets" value="${data ? data.sets : 3}">
                 </div>
                 <div style="flex:1;">
                     <label>Descanso (seg)</label>
-                    <input type="number" class="ex-rest" value="60">
+                    <input type="number" class="ex-rest" value="${data ? data.rest : 60}">
                 </div>
             </div>
             <button class="btn-delete-ex" onclick="this.parentElement.remove()">
@@ -271,13 +296,24 @@ const app = {
 
         if (exercises.length === 0) return alert('Agrega al menos un ejercicio.');
 
-        const newRoutine = {
-            id: Date.now().toString(),
-            name,
-            exercises
-        };
+        if (this.state.editingRoutineId) {
+            // Update existing
+            const idx = this.state.routines.findIndex(r => r.id === this.state.editingRoutineId);
+            if (idx !== -1) {
+                this.state.routines[idx].name = name;
+                this.state.routines[idx].exercises = exercises;
+            }
+            this.state.editingRoutineId = null;
+        } else {
+            // Create new
+            const newRoutine = {
+                id: Date.now().toString(),
+                name,
+                exercises
+            };
+            this.state.routines.push(newRoutine);
+        }
 
-        this.state.routines.push(newRoutine);
         await this.saveData();
         this.navigate('home-view');
     },
@@ -303,8 +339,36 @@ const app = {
             logs: []
         };
 
+        this.startWorkoutTimer();
         this.updateWorkoutUI(routine);
         this.navigate('workout-view');
+    },
+
+    startWorkoutTimer: function () {
+        this.state.workoutSeconds = 0;
+        clearInterval(this.state.workoutInterval); // Safety
+        this.updateWorkoutDurationDisplay();
+
+        this.state.workoutInterval = setInterval(() => {
+            this.state.workoutSeconds++;
+            this.updateWorkoutDurationDisplay();
+        }, 1000);
+    },
+
+    updateWorkoutDurationDisplay: function () {
+        const h = Math.floor(this.state.workoutSeconds / 3600);
+        const m = Math.floor((this.state.workoutSeconds % 3600) / 60);
+        const s = this.state.workoutSeconds % 60;
+
+        let str = "";
+        if (h > 0) {
+            str = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        } else {
+            str = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        const el = document.getElementById('workout-duration-timer');
+        if (el) el.innerText = str;
     },
 
     updateWorkoutUI: function (routine) {
@@ -405,6 +469,7 @@ const app = {
         this.state.activeWorkout.endTime = new Date().toISOString();
         this.state.history.unshift(this.state.activeWorkout);
         await this.saveData(); // Save history
+        clearInterval(this.state.workoutInterval);
         this.state.activeWorkout = null;
         alert('Entrenamiento Terminado! 💪');
         this.renderHistory();
@@ -413,6 +478,7 @@ const app = {
 
     confirmExitWorkout: function () {
         if (confirm('¿Salir del entrenamiento actual? Se perderá el progreso no guardado.')) {
+            clearInterval(this.state.workoutInterval);
             this.state.activeWorkout = null;
             this.navigate('home-view');
         }
