@@ -454,6 +454,58 @@ input:focus {
     background: rgba(255, 71, 87, 0.1);
 }
 
+.history-item {
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+.history-item:active {
+    transform: scale(0.98);
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.history-detail-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.detail-exercise-group {
+    background: var(--card-bg);
+    padding: 15px;
+    border-radius: var(--border-radius);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.detail-exercise-group h4 {
+    color: var(--primary-color);
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 5px;
+}
+
+.detail-set-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 0.95rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.detail-set-row:last-child {
+    border-bottom: none;
+}
+
+.detail-set-num {
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.detail-set-data {
+    font-weight: 500;
+}
+
 .view-header {
     display: flex;
     align-items: center;

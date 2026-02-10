@@ -481,6 +481,11 @@ const app = {
             const date = new Date(log.startTime).toLocaleDateString();
             const div = document.createElement('div');
             div.className = 'history-item';
+            div.onclick = (e) => {
+                if (!e.target.closest('.delete-history-btn')) {
+                    this.renderHistoryDetail(log.startTime);
+                }
+            };
 
             // Calculate total volume or just show routine name
             const totalSets = log.logs.length;
@@ -499,6 +504,49 @@ const app = {
             `;
             container.appendChild(div);
         });
+    },
+
+    renderHistoryDetail: function (startTime) {
+        const log = this.state.history.find(h => h.startTime === startTime);
+        if (!log) return;
+
+        const container = document.getElementById('history-detail-content');
+        document.getElementById('history-detail-title').innerText = log.routineName;
+        container.innerHTML = '';
+
+        // Group logs by exercise
+        const exercises = {};
+        log.logs.forEach(set => {
+            if (!exercises[set.exercise]) {
+                exercises[set.exercise] = [];
+            }
+            exercises[set.exercise].push(set);
+        });
+
+        for (const [exerciseName, sets] of Object.entries(exercises)) {
+            const group = document.createElement('div');
+            group.className = 'detail-exercise-group';
+
+            let setsHTML = '';
+            sets.forEach((set, index) => {
+                setsHTML += `
+                    <div class="detail-set-row">
+                        <span class="detail-set-num">Serie ${index + 1}</span>
+                        <span class="detail-set-data">${set.weight}kg x ${set.reps} reps</span>
+                    </div>
+                `;
+            });
+
+            group.innerHTML = `
+                <h4>${exerciseName}</h4>
+                <div class="detail-sets-list">
+                    ${setsHTML}
+                </div>
+            `;
+            container.appendChild(group);
+        }
+
+        this.navigate('history-detail-view');
     },
 
     exportData: function () {
