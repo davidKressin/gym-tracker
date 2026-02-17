@@ -17,7 +17,10 @@ const app = {
         workoutSeconds: 0,
         editingRoutineId: null,
         historyView: 'list', // 'list' or 'calendar'
-        calendarDate: new Date() // Current month being viewed
+        calendarDate: new Date(), // Current month being viewed
+        goals: { exercise: '', targetWeight: 0 },
+        selectedAvatar: 'man-1',
+        profile: { name: '', avatar: 'man-1' }
     },
 
     // INIT
@@ -41,9 +44,13 @@ const app = {
                 this.state.user = user;
                 document.getElementById('login-view').classList.add('hidden');
                 document.getElementById('main-app-content').classList.remove('hidden');
-                document.getElementById('user-display-name').innerText = user.email.split('@')[0];
 
                 await this.loadData();
+
+                const nameToDisplay = this.state.profile.name || user.email.split('@')[0];
+                document.getElementById('user-display-name').innerText = nameToDisplay;
+                this.updateAvatarUI(this.state.profile.avatar || 'man-1');
+
                 this.renderRoutines();
                 this.renderHistory();
                 this.navigate('home-view');
@@ -68,12 +75,46 @@ const app = {
         document.getElementById('tab-register').classList.toggle('active', mode === 'register');
         document.getElementById('auth-submit-btn').innerText = mode === 'login' ? 'Ingresar' : 'Registrarse';
         document.getElementById('auth-error').innerText = '';
+        document.getElementById('register-extra-fields').classList.toggle('hidden', mode === 'login');
+    },
+
+    selectAvatar: function (avatarId, el) {
+        this.state.selectedAvatar = avatarId;
+        document.querySelectorAll('.avatar-option').forEach(opt => opt.classList.remove('selected'));
+        el.classList.add('selected');
+    },
+
+    updateAvatarUI: function (avatarId) {
+        const colors = {
+            'man-1': '#00ff88',
+            'woman-1': '#7000ff',
+            'man-2': '#ff4757',
+            'woman-2': '#ffa502'
+        };
+        const color = colors[avatarId] || '#00ff88';
+
+        // Header avatar (if exists)
+        const headerAv = document.getElementById('user-header-avatar');
+        if (headerAv) headerAv.querySelector('ion-icon').style.color = color;
+
+        // Progress page avatar
+        const progressAv = document.getElementById('user-progress-avatar');
+        if (progressAv) progressAv.querySelector('ion-icon').style.color = color;
+
+        // Profile page avatar
+        const profileAv = document.getElementById('user-profile-avatar-large');
+        if (profileAv) profileAv.querySelector('ion-icon').style.color = color;
+
+        // Home page avatar
+        const homeAv = document.getElementById('user-home-avatar');
+        if (homeAv) homeAv.querySelector('ion-icon').style.color = color;
     },
 
     handleAuth: async function (e) {
         e.preventDefault();
         const email = document.getElementById('auth-email').value;
         const password = document.getElementById('auth-password').value;
+        const name = document.getElementById('auth-name').value;
         const errorEl = document.getElementById('auth-error');
         errorEl.innerText = '';
 
@@ -83,7 +124,11 @@ const app = {
             if (this.state.authMode === 'login') {
                 await signInWithEmailAndPassword(auth, email, password);
             } else {
-                await createUserWithEmailAndPassword(auth, email, password);
+                if (!name) return alert("Por favor ingresa tu nombre.");
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                this.state.user = userCredential.user;
+                this.state.profile = { name: name, avatar: this.state.selectedAvatar };
+                await this.saveData(); // Save initial profile
             }
         } catch (error) {
             console.error("Full Auth Error:", error);
@@ -125,6 +170,13 @@ const app = {
         // Update nav buttons
         document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
         if (viewId === 'home-view') document.querySelector('.nav-btn[onclick*="home-view"]').classList.add('active');
+        if (viewId === 'progress-view') {
+            document.querySelector('.nav-btn[onclick*="progress-view"]').classList.add('active');
+            this.renderProgress();
+        }
+        if (viewId === 'profile-view') {
+            this.renderProfile();
+        }
         if (viewId === 'history-view') document.querySelector('.nav-btn[onclick*="history-view"]').classList.add('active');
 
         // Clear editor if navigating there and not editing
@@ -146,6 +198,8 @@ const app = {
                 const data = docSnap.data();
                 this.state.routines = data.routines || [];
                 this.state.history = data.history || [];
+                this.state.goals = data.goals || { exercise: '', targetWeight: 0 };
+                this.state.profile = data.profile || { name: '', avatar: 'man-1' };
                 console.log("Data loaded from Firestore");
             } else {
                 // Check for migration from localStorage
@@ -177,7 +231,9 @@ const app = {
             const docRef = doc(db, "users", userId);
             await setDoc(docRef, {
                 routines: this.state.routines,
-                history: this.state.history
+                history: this.state.history,
+                goals: this.state.goals,
+                profile: this.state.profile
             });
             console.log("Data saved to Firestore");
             this.renderRoutines(); // Refresh UI
@@ -276,6 +332,10 @@ const app = {
                     <input type="number" class="ex-rest" value="${data ? data.rest : 60}">
                 </div>
             </div>
+            <div style="margin-top:10px;">
+                <label>Indicaciones (Opcional)</label>
+                <input type="text" class="ex-notes" placeholder="Ej. Retracción escapular" value="${data ? (data.notes || '') : ''}">
+            </div>
             <button class="btn-delete-ex" onclick="this.parentElement.remove()">
                 <ion-icon name="trash-outline"></ion-icon>
             </button>
@@ -293,7 +353,8 @@ const app = {
             const exName = group.querySelector('.ex-name').value;
             const sets = parseInt(group.querySelector('.ex-sets').value) || 3;
             const rest = parseInt(group.querySelector('.ex-rest').value) || 60;
-            if (exName) exercises.push({ name: exName, sets, rest });
+            const notes = group.querySelector('.ex-notes').value || '';
+            if (exName) exercises.push({ name: exName, sets, rest, notes });
         });
 
         if (exercises.length === 0) return alert('Agrega al menos un ejercicio.');
@@ -373,6 +434,22 @@ const app = {
         if (el) el.innerText = str;
     },
 
+    getDurationString: function (start, end) {
+        if (!start || !end) return "0m";
+        const startTime = new Date(start);
+        const endTime = new Date(end);
+        const diffMs = endTime - startTime;
+        const diffSecs = Math.floor(diffMs / 1000);
+
+        const h = Math.floor(diffSecs / 3600);
+        const m = Math.floor((diffSecs % 3600) / 60);
+
+        if (h > 0) {
+            return `${h}h ${m.toString().padStart(2, '0')}m`;
+        }
+        return `${m}m`;
+    },
+
     updateWorkoutUI: function (routine) {
         const idx = this.state.activeWorkout.currentExerciseIndex;
         const exercise = routine.exercises[idx];
@@ -387,6 +464,16 @@ const app = {
         document.getElementById('current-set-num').innerText = this.state.activeWorkout.currentSet;
         document.getElementById('total-sets-num').innerText = exercise.sets;
         document.getElementById('target-rest-time').innerText = exercise.rest;
+
+        const notesEl = document.getElementById('active-exercise-instructions');
+        if (notesEl) {
+            if (exercise.notes) {
+                notesEl.innerText = exercise.notes;
+                notesEl.classList.remove('hidden');
+            } else {
+                notesEl.classList.add('hidden');
+            }
+        }
 
         // Display Previous Max Weight & Reps
         const prevBest = this.getPreviousBestSet(routine.id, exercise.name);
@@ -557,6 +644,7 @@ const app = {
 
             // Calculate total volume or just show routine name
             const totalSets = log.logs.length;
+            const duration = this.getDurationString(log.startTime, log.endTime);
 
             div.innerHTML = `
                 <div class="history-item-header">
@@ -568,7 +656,9 @@ const app = {
                         </button>
                     </div>
                 </div>
-                <p style="font-size:0.9rem; color:var(--text-secondary)">Sets completados: ${totalSets}</p>
+                <p style="font-size:0.9rem; color:var(--text-secondary)">
+                    Sets completados: ${totalSets} | Duración: ${duration}
+                </p>
             `;
             container.appendChild(div);
         });
@@ -579,8 +669,15 @@ const app = {
         if (!log) return;
 
         const container = document.getElementById('history-detail-content');
+        const duration = this.getDurationString(log.startTime, log.endTime);
         document.getElementById('history-detail-title').innerText = log.routineName;
-        container.innerHTML = '';
+
+        container.innerHTML = `
+            <p style="color:var(--text-secondary); margin-bottom:15px; font-size:0.9rem;">
+                <ion-icon name="time-outline" style="vertical-align:middle;"></ion-icon> 
+                Duración total: ${duration}
+            </p>
+        `;
 
         // Group logs by exercise
         const exercises = {};
@@ -718,6 +815,148 @@ const app = {
             // A simple alert for now to let user know they can see them in the list
             alert(`Hubo ${dayWorkouts.length} entrenamientos este día. Míralos en la lista.`);
         }
+    },
+
+    // PROGRESS LOGIC
+    renderProgress: function () {
+        const { goals, history } = this.state;
+
+        // 1. Render Goal Section
+        const exerciseText = document.getElementById('goal-exercise-text');
+        const weightText = document.getElementById('goal-weight-text');
+        const progressFill = document.getElementById('goal-progress-fill');
+        const percentageText = document.getElementById('goal-percentage');
+        const statusMessage = document.getElementById('goal-status-message');
+
+        if (goals.exercise) {
+            exerciseText.innerText = goals.exercise;
+            weightText.innerText = `${goals.targetWeight}kg`;
+
+            // Find best weight reached for this exercise
+            let bestWeight = 0;
+            history.forEach(log => {
+                log.logs.forEach(set => {
+                    if (set.exercise.toLowerCase() === goals.exercise.toLowerCase()) {
+                        const w = parseFloat(set.weight) || 0;
+                        if (w > bestWeight) bestWeight = w;
+                    }
+                });
+            });
+
+            const pct = goals.targetWeight > 0 ? Math.min(Math.round((bestWeight / goals.targetWeight) * 100), 100) : 0;
+            progressFill.style.width = `${pct}%`;
+            percentageText.innerText = `${pct}%`;
+
+            if (pct >= 100) {
+                statusMessage.innerText = "¡Objetivo alcanzado! 🏆";
+                statusMessage.style.color = "var(--primary-color)";
+            } else if (bestWeight > 0) {
+                statusMessage.innerText = `Tu mejor marca: ${bestWeight}kg. ¡Faltan ${goals.targetWeight - bestWeight}kg!`;
+                statusMessage.style.color = "var(--text-secondary)";
+            } else {
+                statusMessage.innerText = "Aún no registras levantamientos para este ejercicio.";
+            }
+
+            // Sync inputs
+            document.getElementById('goal-exercise-input').value = goals.exercise;
+            document.getElementById('goal-weight-input').value = goals.targetWeight;
+        } else {
+            exerciseText.innerText = "Sin objetivo";
+            weightText.innerText = "0kg";
+            progressFill.style.width = "0%";
+            percentageText.innerText = "0%";
+            statusMessage.innerText = "¡Establece tu meta!";
+        }
+
+        // 2. Render Progression List (Last weight per exercise)
+        const progressionList = document.getElementById('progression-list');
+        progressionList.innerHTML = '';
+
+        // Extract and process progression data
+        const exercisesProgression = {}; // { exerciseName: { currentWeight, prevWeight, lastDate } }
+
+        // History is sorted desc by startTime (unshifted), so we reverse to process chronologically or just iterate
+        // Actually, we want the LATEST two distinct session weights for each exercise.
+
+        const exerciseStats = {}; // { name: [weights] }
+
+        [...history].reverse().forEach(log => {
+            log.logs.forEach(set => {
+                const name = set.exercise;
+                const weight = parseFloat(set.weight) || 0;
+                if (weight > 0) {
+                    if (!exerciseStats[name]) exerciseStats[name] = [];
+                    // Only add if it's a different session date OR just keep the highest of the session? 
+                    // Let's keep the highest weight of each session for that exercise.
+                    const dateStr = new Date(log.startTime).toLocaleDateString();
+                    const lastEntry = exerciseStats[name][exerciseStats[name].length - 1];
+
+                    if (!lastEntry || lastEntry.date !== dateStr) {
+                        exerciseStats[name].push({ weight, date: dateStr });
+                    } else {
+                        if (weight > lastEntry.weight) lastEntry.weight = weight;
+                    }
+                }
+            });
+        });
+
+        Object.entries(exerciseStats).forEach(([name, stats]) => {
+            const current = stats[stats.length - 1];
+            const previous = stats.length > 1 ? stats[stats.length - 2] : null;
+
+            const item = document.createElement('div');
+            item.className = 'progression-item';
+
+            let diffHTML = '';
+            if (previous) {
+                const diff = current.weight - previous.weight;
+                const diffClass = diff > 0 ? 'diff-up' : (diff < 0 ? 'diff-down' : 'diff-neutral');
+                const sign = diff > 0 ? '+' : '';
+                diffHTML = `<span class="progression-diff ${diffClass}">${sign}${diff}kg</span>`;
+            }
+
+            item.innerHTML = `
+                <div class="progression-main">
+                    <h4>${name}</h4>
+                    <p>Último: ${current.date}</p>
+                </div>
+                <div class="progression-stats">
+                    <span class="progression-weight">${current.weight}kg</span>
+                    ${diffHTML}
+                </div>
+            `;
+            progressionList.appendChild(item);
+        });
+
+        if (Object.keys(exerciseStats).length === 0) {
+            progressionList.innerHTML = '<p style="text-align:center;color:var(--text-secondary);margin-top:20px;">No hay datos de progresión aún.</p>';
+        }
+    },
+
+    toggleGoalEdit: function () {
+        document.getElementById('goal-display').classList.toggle('hidden');
+        document.getElementById('goal-edit').classList.toggle('hidden');
+    },
+
+    updateGoal: async function () {
+        const exercise = document.getElementById('goal-exercise-input').value;
+        const weight = parseFloat(document.getElementById('goal-weight-input').value) || 0;
+
+        if (!exercise) return alert("Ingresa un ejercicio.");
+
+        this.state.goals = { exercise, targetWeight: weight };
+        await this.saveData();
+        this.renderProgress();
+        this.toggleGoalEdit();
+    },
+
+    renderProfile: function () {
+        const { profile, user } = this.state;
+        if (!user) return;
+
+        document.getElementById('profile-name-text').innerText = profile.name || "Sin nombre";
+        document.getElementById('profile-email-text').innerText = user.email;
+        this.updateAvatarUI(profile.avatar || 'man-1');
     },
 
     exportData: function () {
