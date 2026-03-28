@@ -53,6 +53,7 @@ const app = {
 
                 this.renderRoutines();
                 this.renderHistory();
+                this.renderWeeklyProgress();
                 this.navigate('home-view');
             } else {
                 this.state.user = null;
@@ -60,6 +61,13 @@ const app = {
                 document.getElementById('main-app-content').classList.add('hidden');
             }
         });
+
+        // Global listener for calc() helper in inputs
+        document.addEventListener('blur', (e) => {
+            if (e.target.tagName === 'INPUT') {
+                this.handleCalcInputs(e.target);
+            }
+        }, true);
 
         // Prevent accidental back navigation on mobile
         window.history.pushState(null, null, window.location.href);
@@ -169,7 +177,10 @@ const app = {
 
         // Update nav buttons
         document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-        if (viewId === 'home-view') document.querySelector('.nav-btn[onclick*="home-view"]').classList.add('active');
+        if (viewId === 'home-view') {
+            document.querySelector('.nav-btn[onclick*="home-view"]').classList.add('active');
+            this.renderWeeklyProgress();
+        }
         if (viewId === 'progress-view') {
             document.querySelector('.nav-btn[onclick*="progress-view"]').classList.add('active');
             this.renderProgress();
@@ -275,6 +286,9 @@ const app = {
                 <h3>${routine.name}</h3>
                 <p>${exerciseCount} Ejercicios: ${exercisesSummary}</p>
                 <div class="card-actions">
+                   <button class="btn-icon btn-manual-log" title="Registro Manual" onclick="app.openManualLogModal('${routine.id}', event)">
+                        <ion-icon name="calendar-outline"></ion-icon>
+                   </button>
                    <button class="btn-icon" onclick="app.editRoutine('${routine.id}', event)">
                         <ion-icon name="create-outline"></ion-icon>
                    </button>
@@ -284,6 +298,58 @@ const app = {
                 </div>
             `;
             list.appendChild(card);
+        });
+    },
+
+    renderWeeklyProgress: function () {
+        const container = document.getElementById('weekly-progress');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        const today = new Date();
+        const currentDay = today.getDay(); // 0 (Sun) to 6 (Sat)
+        
+        // Find Monday of the current week (assuming Mon = start)
+        const diffToMonday = currentDay === 0 ? 6 : currentDay - 1;
+        const monday = new Date(today);
+        monday.setDate(today.getDate() - diffToMonday);
+        monday.setHours(0, 0, 0, 0);
+
+        const dayLabels = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+        
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(monday);
+            date.setDate(monday.getDate() + i);
+            
+            const isToday = date.toDateString() === today.toDateString();
+            const isFuture = date > today;
+            const hasWorkout = this.checkWorkoutOnDate(date);
+            
+            let status = 'future';
+            if (hasWorkout) {
+                status = 'done';
+            } else if (!isFuture) {
+                status = 'missed';
+            }
+
+            const circle = document.createElement('div');
+            circle.className = `day-circle status-${status} ${isToday ? 'status-today' : ''}`;
+            
+            circle.innerHTML = `
+                <span class="day-label">${dayLabels[i]}</span>
+                <span>${date.getDate()}</span>
+            `;
+            
+            container.appendChild(circle);
+        }
+    },
+
+    checkWorkoutOnDate: function (date) {
+        const dateString = date.toDateString();
+        return this.state.history.some(log => {
+            const logDate = new Date(log.startTime);
+            return logDate.toDateString() === dateString;
         });
     },
 
@@ -325,11 +391,11 @@ const app = {
             <div style="display:flex; gap:10px;">
                 <div style="flex:1;">
                     <label>Series</label>
-                    <input type="number" class="ex-sets" value="${data ? data.sets : 3}">
+                    <input type="text" class="ex-sets" value="${data ? data.sets : 3}" inputmode="numeric">
                 </div>
                 <div style="flex:1;">
                     <label>Descanso (seg)</label>
-                    <input type="number" class="ex-rest" value="${data ? data.rest : 60}">
+                    <input type="text" class="ex-rest" value="${data ? data.rest : 60}" inputmode="numeric">
                 </div>
             </div>
             <div style="margin-top:10px;">
@@ -681,6 +747,15 @@ const app = {
 
         // Group logs by exercise
         const exercises = {};
+        if (log.isManual) {
+            container.innerHTML += `
+                <div class="manual-log-badge">
+                    <ion-icon name="checkmark-circle-outline"></ion-icon>
+                    Este entrenamiento fue registrado manualmente.
+                </div>
+            `;
+        }
+
         log.logs.forEach(set => {
             if (!exercises[set.exercise]) {
                 exercises[set.exercise] = [];
@@ -1016,6 +1091,155 @@ const app = {
             }
         };
         reader.readAsText(file);
+    },
+
+    // MANUAL LOG MODAL
+    openManualLogModal: function (id, event) {
+        if (event) event.stopPropagation();
+        const routine = this.state.routines.find(r => r.id === id);
+        if (!routine) return;
+
+        this.state.manualLogRoutineId = id;
+        document.getElementById('manual-routine-name').innerText = routine.name;
+        
+        // Default to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('manual-log-date').value = today;
+
+        // Generate Exercise Inputs
+        const exercisesContainer = document.getElementById('manual-log-exercises');
+        exercisesContainer.innerHTML = '';
+
+        routine.exercises.forEach((ex, exIdx) => {
+            const exDiv = document.createElement('div');
+            exDiv.className = 'manual-exercise-item';
+            exDiv.innerHTML = `<h4>${ex.name}</h4>`;
+
+            for (let s = 1; s <= ex.sets; s++) {
+                const setRow = document.createElement('div');
+                setRow.className = 'manual-set-row';
+                setRow.innerHTML = `
+                    <span class="manual-set-num">Serie ${s}</span>
+                    <div class="manual-input-pair">
+                        <input type="text" class="manual-weight" placeholder="Peso" data-ex="${exIdx}" data-set="${s}" inputmode="decimal">
+                        <input type="text" class="manual-reps" placeholder="Reps" data-ex="${exIdx}" data-set="${s}" inputmode="numeric">
+                    </div>
+                `;
+                exDiv.appendChild(setRow);
+            }
+            exercisesContainer.appendChild(exDiv);
+        });
+        
+        document.getElementById('manual-log-modal').classList.remove('hidden');
+    },
+
+    closeManualLogModal: function () {
+        document.getElementById('manual-log-modal').classList.add('hidden');
+        this.state.manualLogRoutineId = null;
+    },
+
+    saveManualLog: async function () {
+        const dateInput = document.getElementById('manual-log-date').value;
+        if (!dateInput) return alert("Selecciona una fecha.");
+
+        // UI Feedback: Loading state
+        const btn = document.getElementById('manual-log-confirm-btn');
+        const spinner = document.getElementById('manual-log-spinner');
+        const btnText = document.getElementById('manual-log-btn-text');
+
+        if (btn) btn.disabled = true;
+        if (spinner) spinner.classList.remove('hidden');
+        if (btnText) btnText.innerText = 'Guardando...';
+
+        const routine = this.state.routines.find(r => r.id === this.state.manualLogRoutineId);
+        if (!routine) {
+            // Reset UI if error
+            if (btn) btn.disabled = false;
+            if (spinner) spinner.classList.add('hidden');
+            if (btnText) btnText.innerText = 'Confirmar';
+            return;
+        }
+
+        // Create a date object from the input (YYYY-MM-DD)
+        const [year, month, day] = dateInput.split('-').map(Number);
+        const logDate = new Date(year, month - 1, day, 10, 0, 0); // Default to 10AM
+
+        // Collect Logs
+        const logs = [];
+        const exerciseItems = document.querySelectorAll('.manual-exercise-item');
+        
+        routine.exercises.forEach((ex, exIdx) => {
+            const weightInputs = document.querySelectorAll(`.manual-weight[data-ex="${exIdx}"]`);
+            const repsInputs = document.querySelectorAll(`.manual-reps[data-ex="${exIdx}"]`);
+            
+            weightInputs.forEach((input, sIdx) => {
+                logs.push({
+                    exercise: ex.name,
+                    set: sIdx + 1,
+                    weight: input.value || "-",
+                    reps: repsInputs[sIdx].value || "-",
+                    timestamp: logDate.toISOString()
+                });
+            });
+        });
+
+        const manualEntry = {
+            routineId: routine.id,
+            routineName: routine.name,
+            startTime: logDate.toISOString(),
+            endTime: new Date(logDate.getTime() + 60 * 60 * 1000).toISOString(),
+            logs: logs,
+            isManual: true
+        };
+
+        try {
+            this.state.history.unshift(manualEntry);
+            this.state.history.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+
+            await this.saveData();
+            this.closeManualLogModal();
+            this.renderHistory();
+            this.renderWeeklyProgress();
+            alert("¡Entrenamiento registrado manualmente!");
+        } catch (error) {
+            console.error("Manual Log Save Error:", error);
+            alert("Error al guardar el entrenamiento.");
+        } finally {
+            // Reset UI for next time (in case modal stays open or on error)
+            if (btn) btn.disabled = false;
+            if (spinner) spinner.classList.add('hidden');
+            if (btnText) btnText.innerText = 'Confirmar';
+        }
+    },
+
+    handleCalcInputs: function (input) {
+        const val = input.value.trim().toLowerCase();
+        if (val.startsWith('calc(') && val.endsWith(')')) {
+            try {
+                // Extract inner expression
+                let expression = val.substring(5, val.length - 1);
+                
+                // Handle comma as decimal separator
+                expression = expression.replace(/,/g, '.');
+                
+                // Sanitize: only allow numbers and basic math operators
+                if (/[^0-9+\-*/().\s]/.test(expression)) {
+                    console.warn("Invalid characters in expression:", expression);
+                    return;
+                }
+                
+                // Safely evaluate
+                const result = new Function(`return (${expression})`)();
+                
+                // Format: round to 2 decimals
+                if (!isNaN(result)) {
+                    input.value = parseFloat(result.toFixed(2));
+                }
+            } catch (error) {
+                console.error("Calculation Error:", error);
+                // Leave original value on error
+            }
+        }
     }
 };
 
